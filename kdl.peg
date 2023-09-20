@@ -21,17 +21,16 @@ func toAnySlice(v any) []any {
 }
 
 nodes = linespace* (node nodes?)? linespace*
-node = id:identifier node_space+ argsRaw:boolean* node_space* node_terminator {
+node = id:identifier argsRaw:(node_space+ boolean)* node_space* node_terminator {
   values := make([]bool, 0)
   args := toAnySlice(argsRaw)
   fmt.Printf("args: %+v", args)
   for _, arg := range args {
-    // for _, nest := range expressions {
-      argBool, ok := arg.(bool)
-      if ok {
-        values = append(values, argBool)
-      }
-    // }
+    afterSpace := toAnySlice(arg)[1]
+    argBool, ok := afterSpace.(bool)
+     if ok {
+       values = append(values, argBool)
+     }
   }
   return Node{
     Identifier: string(id.([]byte)),
