@@ -22,6 +22,7 @@ type Value struct {
 type Node struct {
   Identifier string
   Values []Value
+  Children []Node
 }
 
 func String(n *Node) string {
@@ -55,7 +56,7 @@ func toAnySlice(v any) []any {
 }
 
 nodes = linespace* nodes:(node nodes?)? linespace*
-node = id:identifier valuesRaw:(node_space+ value)* node_space* node_terminator {
+node = id:identifier valuesRaw:(node_space+ value)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
   values := make([]Value, 0)
   spaceThenValues := toAnySlice(valuesRaw)
   // fmt.Printf("values: %+v", spaceThenValues)
@@ -79,14 +80,37 @@ node = id:identifier valuesRaw:(node_space+ value)* node_space* node_terminator 
       values = append(values, Value{Type: StringValue, String: valString})
     }
   }
+
+  // parsing out the actual child nodes
+  // from a sea of whitespace tokens is pretty horrible.
+  // This approach does a brute force recursive traverse
+  // of nested slices to find any actual Node types
+  children := make([]Node, 0)
+  var walk func([]interface{})
+  walk = func (kids []interface{}) {
+    for _, kid := range kids {
+      if kidSlice, ok := kid.([]interface{}); ok {
+        walk(kidSlice)
+        continue
+      }
+      if node, ok := kid.(Node); ok {
+        fmt.Printf("Found kid: %s", node.Identifier)
+        children = append(children, node)
+        continue
+      }
+    }
+  }
+  walk(toAnySlice(childrenRaw))
   return Node{
     Identifier: string(id.([]byte)),
     Values: values,
+    Children: children,
   }, nil
 }
 node_terminator = single_line_comment / newline / ';' / eof
 node_space = ws* escline ws* / ws+
 escline = '\\' ws* (single_line_comment / newline)
+node_children = ("/-" node_space*)? '{' nodes '}'
 bom = '\uFEFF'
 // TODO add rest from table in spec
 unicode_space = [ ]

@@ -13,6 +13,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
-	fmt.Printf("%s\n", nodes)
-	fmt.Printf("%+v\n", nodes)
+	fmt.Printf("%s\n\n", nodes)
+	fmt.Printf("%+v\n\n", nodes)
 }
