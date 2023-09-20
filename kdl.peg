@@ -3,13 +3,47 @@
 //
 package kdl
 
+type ValueType int
+
+const (
+	NullValue ValueType = iota
+	BoolValue
+	Float64Value
+	StringValue
+)
+
+type Value struct {
+  Type ValueType
+  String string
+  Float64 float64
+  Bool bool
+}
+
 type Node struct {
   Identifier string
-  Values []bool
+  Values []Value
 }
 
 func String(n *Node) string {
-  return n.Identifier
+  rep := n.Identifier
+  for _, arg := range n.Values {
+    rep += " "
+    switch arg.Type {
+    case NullValue:
+    rep += "nil"
+    case BoolValue:
+    if arg.Bool {
+    rep += "true"
+    } else {
+    rep += "false"
+    }
+    case Float64Value:
+    rep += fmt.Sprintf("%d", arg.Float64)
+    case StringValue:
+    rep += arg.String
+  }
+  }
+  return rep
 }
 
 func toAnySlice(v any) []any {
@@ -20,17 +54,26 @@ func toAnySlice(v any) []any {
 }
 }
 
-nodes = linespace* (node nodes?)? linespace*
-node = id:identifier argsRaw:(node_space+ boolean)* node_space* node_terminator {
-  values := make([]bool, 0)
-  args := toAnySlice(argsRaw)
-  fmt.Printf("args: %+v", args)
-  for _, arg := range args {
-    afterSpace := toAnySlice(arg)[1]
+nodes = linespace* nodes:(node nodes?)? linespace*
+node = id:identifier valuesRaw:(node_space+ value)* node_space* node_terminator {
+  values := make([]Value, 0)
+  spaceThenValues := toAnySlice(valuesRaw)
+  // fmt.Printf("values: %+v", spaceThenValues)
+  for _, spaceThenValue := range spaceThenValues {
+    afterSpace := toAnySlice(spaceThenValue)[1]
+    if afterSpace == nil {
+      values = append(values, Value{Type: NullValue})
+      continue
+    }
     argBool, ok := afterSpace.(bool)
-     if ok {
-       values = append(values, argBool)
-     }
+    if ok {
+      values = append(values, Value{Type: BoolValue, Bool: argBool})
+      continue
+    }
+    argFloat64, ok := afterSpace.(float64)
+    if ok {
+      values = append(values, Value{Type: Float64Value, Float64: argFloat64})
+    }
   }
   return Node{
     Identifier: string(id.([]byte)),
@@ -52,10 +95,8 @@ identifier = [a-zA-Z]+ { return c.text, nil }
 node_space = ws+
 eof = !.
 boolean = "true" { return true, nil } / "false" { return false, nil }
-/*
-nodes = linespace* (node nodes?)? linespace*
-node = identifier (node_space+ value)*
-keyword = boolean / "null"
+null = "null" { return nil, nil }
+keyword = boolean / null
 value = number / keyword
 number = '-'? Integer ( '.' DecimalDigit+ )? Exponent? {
     // JSON numbers have the same syntax as Go's, and are parseable using
@@ -70,9 +111,9 @@ Exponent = 'e'i [+-]? DecimalDigit+
 DecimalDigit = [0-9]
 
 NonZeroDecimalDigit = [1-9]
-
 /*
-
+nodes = linespace* (node nodes?)? linespace*
+node = identifier (node_space+ value)*
 
 identifier = bare_identifier
 
