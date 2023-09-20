@@ -2,49 +2,119 @@
 // Package kdl parses [kdl][https://github.com/kdl-org/kdl/blob/main/SPEC.md]. [kdl.dev]().
 //
 package kdl
+
+type Node struct {
+  Identifier string
+  Values []bool
 }
 
-KDL ← _ val:Value+ EOF {
-    return val, nil
+func String(n *Node) string {
+  return n.Identifier
 }
 
-Value ← val:( Number / String / Bool / Null ) _ {
-    return val, nil
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
 }
 
-Number ← '-'? Integer ( '.' DecimalDigit+ )? Exponent? {
+nodes = linespace* (node nodes?)? linespace*
+node = id:identifier node_space+ argsRaw:boolean* node_space* node_terminator {
+  values := make([]bool, 0)
+  args := toAnySlice(argsRaw)
+  fmt.Printf("args: %+v", args)
+  for _, arg := range args {
+    // for _, nest := range expressions {
+      argBool, ok := arg.(bool)
+      if ok {
+        values = append(values, argBool)
+      }
+    // }
+  }
+  return Node{
+    Identifier: string(id.([]byte)),
+    Values: values,
+  }, nil
+}
+node_terminator = single_line_comment / newline / ';' / eof
+node_space = ws* escline ws* / ws+
+escline = '\\' ws* (single_line_comment / newline)
+bom = '\uFEFF'
+// TODO add rest from table in spec
+unicode_space = [ ]
+ws = bom / unicode_space
+// TODO add rest from table in spec
+newline = [\n]
+linespace = newline / ws / single_line_comment
+single_line_comment = "//" newline+ (newline / eof)
+identifier = [a-zA-Z]+ { return c.text, nil }
+node_space = ws+
+eof = !.
+boolean = "true" { return true, nil } / "false" { return false, nil }
+/*
+nodes = linespace* (node nodes?)? linespace*
+node = identifier (node_space+ value)*
+keyword = boolean / "null"
+value = number / keyword
+number = '-'? Integer ( '.' DecimalDigit+ )? Exponent? {
     // JSON numbers have the same syntax as Go's, and are parseable using
     // strconv.
     return strconv.ParseFloat(string(c.text), 64)
 }
 
-Integer ← '0' / NonZeroDecimalDigit DecimalDigit*
+Integer = '0' / NonZeroDecimalDigit DecimalDigit*
 
-Exponent ← 'e'i [+-]? DecimalDigit+
+Exponent = 'e'i [+-]? DecimalDigit+
 
-String ← '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
+DecimalDigit = [0-9]
+
+NonZeroDecimalDigit = [1-9]
+
+/*
+
+
+identifier = bare_identifier
+
+node = identifier (node_space+ value)* node_space* node_terminator
+node_terminator = single_line_comment / newline / ';' / eof
+
+
+
+
+EscapedChar = [\x00-\x1f"\\]
+
+SingleCharEscape = ["\\/bfnrt]
+
+UnicodeEscape = 'u' HexDigit HexDigit HexDigit HexDigit
+
+EscapeSequence = SingleCharEscape / UnicodeEscape
+
+string = '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
     return strconv.Unquote(string(c.text))
 }
 
-EscapedChar ← [\x00-\x1f"\\]
+Document = _ node:Node+ eof {
+    return node, nil
+}
 
-EscapeSequence ← SingleCharEscape / UnicodeEscape
+Node = node:(Identifier) _ {
+    return node, nil
+}
 
-SingleCharEscape ← ["\\/bfnrt]
 
-UnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit
+BareIdentifier = id:()
 
-DecimalDigit ← [0-9]
+Identifier = String / BareIdentifier
 
-NonZeroDecimalDigit ← [1-9]
 
-HexDigit ← [0-9a-f]i
+HexDigit = [0-9a-f]i
 
-Bool ← "true" { return true, nil } / "false" { return false, nil }
 
-Null ← "null" { return nil, nil }
+Null = "null" { return nil, nil }
 
-_ "whitespace" ← [ \t\r\n]*
+_ "whitespace" = [ \t\r\n]*
 
-EOF ← !.
+*/
