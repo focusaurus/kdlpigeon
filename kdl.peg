@@ -14,35 +14,101 @@ const (
 
 type Value struct {
   Type ValueType
-  String string
+  Str string
   Float64 float64
   Bool bool
+}
+
+func (v *Value) String() string {
+  switch v.Type {
+  case NullValue:
+    return "nil"
+  case BoolValue:
+    return fmt.Sprintf("%t", v.Bool)
+  case Float64Value:
+    return fmt.Sprintf("%f", v.Float64)
+  case StringValue:
+    return v.Str
+  }
+  return fmt.Sprintf("?val?")
+}
+
+func parseValue(v any) Value {
+  if valBool, ok := v.(bool); ok {
+    return Value{Type: BoolValue, Bool: valBool}
+  }
+  if valFloat64, ok := v.(float64); ok {
+    return Value{Type: Float64Value, Float64: valFloat64}
+  }
+  if valString, ok := v.(string); ok {
+    return Value{Type: StringValue, Str: valString}
+  }
+  return Value{}
+}
+
+type ValueG[T bool|string|float64] struct {
+  Value T
+}
+
+func (v *ValueG[T]) String() string {
+  format := "%+v"
+  switch any(v.Value).(type) {
+  case bool:
+    format = "%b"
+  case string:
+    format = "%s"
+  case float64:
+    format = "%d"
+  }
+  return fmt.Sprintf(format, v.Value)
+}
+/*
+func parseValueG[T bool | string | float64](v any) ValueG[T] {
+  switch v.(type) {
+  case bool:
+    vv, _ := v.(bool)
+    return ValueG[T]{Value: vv}
+  case string:
+    return ValueG[T]{Value: v.(string)}
+  case float64:
+    return ValueG[T]{Value: v.(float64)}
+  }
+  return ValueG{}
+}
+*/
+type Prop struct {
+  Identifier string
+  Value Value
 }
 
 type Node struct {
   Identifier string
   Values []Value
+  Props []Prop
   Children []Node
 }
 
-func String(n *Node) string {
+func (n *Node) String() string {
   rep := n.Identifier
-  for _, val := range n.Values {
-    rep += " "
-    switch val.Type {
-    case NullValue:
-    rep += "nil"
-    case BoolValue:
-    if val.Bool {
-    rep += "true"
-    } else {
-    rep += "false"
-    }
-    case Float64Value:
-    rep += fmt.Sprintf("%d", val.Float64)
-    case StringValue:
-    rep += val.String
+  for _, prop := range n.Props {
+    rep += fmt.Sprintf(`%s=%s `, prop.Identifier, prop.Value.String())
   }
+  for _, val := range n.Values {
+    rep += " " + fmt.Sprintf("%s", val.String())
+    // switch val.Type {
+    // case NullValue:
+    // rep += "nil"
+    // case BoolValue:
+    // if val.Bool {
+    // rep += "true"
+    // } else {
+    // rep += "false"
+    // }
+    // case Float64Value:
+    // rep += fmt.Sprintf("%d", val.Float64)
+    // case StringValue:
+    // rep += val.Str
+  // }
   }
   return rep
 }
@@ -53,39 +119,18 @@ func toAnySlice(v any) []any {
     }
     return v.([]any)
 }
+
 }
 
 nodes = linespace* nodes:(node nodes?)? linespace*
-node = id:identifier valuesRaw:(node_space+ value)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
-  values := make([]Value, 0)
-  spaceThenValues := toAnySlice(valuesRaw)
-  // fmt.Printf("values: %+v", spaceThenValues)
-  for _, spaceThenValue := range spaceThenValues {
-    afterSpace := toAnySlice(spaceThenValue)[1]
-    if afterSpace == nil {
-      values = append(values, Value{Type: NullValue})
-      continue
-    }
-    valBool, ok := afterSpace.(bool)
-    if ok {
-      values = append(values, Value{Type: BoolValue, Bool: valBool})
-      continue
-    }
-    valFloat64, ok := afterSpace.(float64)
-    if ok {
-      values = append(values, Value{Type: Float64Value, Float64: valFloat64})
-    }
-    valString, ok := afterSpace.(string)
-    if ok {
-      values = append(values, Value{Type: StringValue, String: valString})
-    }
-  }
-
+node = id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
   // parsing out the actual child nodes
   // from a sea of whitespace tokens is pretty horrible.
   // This approach does a brute force recursive traverse
   // of nested slices to find any actual Node types
   children := make([]Node, 0)
+  values := make([]Value, 0)
+  props := make([]Prop, 0)
   var walk func([]interface{})
   walk = func (kids []interface{}) {
     for _, kid := range kids {
@@ -94,16 +139,48 @@ node = id:identifier valuesRaw:(node_space+ value)* childrenRaw:(node_space* nod
         continue
       }
       if node, ok := kid.(Node); ok {
-        fmt.Printf("Found kid: %s", node.Identifier)
+        fmt.Printf("Found child: %s\n", node.Identifier)
         children = append(children, node)
         continue
       }
+      if prop, ok := kid.(Prop); ok {
+        fmt.Printf("Found prop: %s\n", prop.Identifier)
+        props = append(props, prop)
+        continue
+      }
+      if value, ok := kid.(Value); ok {
+        fmt.Printf("Found Value: %s\n", value.String())
+        values = append(values, value)
+        continue
+      }
+      // if kid == nil {
+      //   values = append(values, Value{Type: NullValue})
+      // }
+      // values = append(values, parseValue(kid))
     }
   }
+  spaceThenValues := toAnySlice(valuesRaw)
+  walk(spaceThenValues)
+
+  // fmt.Printf("values: %+v", spaceThenValues)
+  // for _, spaceThenValue := range spaceThenValues {
+  //   afterSpace := toAnySlice(spaceThenValue)[1]
+  //   if prop, ok := afterSpace.(Prop); ok {
+  //     props = append(props, prop)
+  //     continue
+  //   }
+  //   if afterSpace == nil {
+  //     values = append(values, Value{Type: NullValue})
+  //     continue
+  //   }
+  //   values = append(values, parseValue(afterSpace))
+  // }
+
   walk(toAnySlice(childrenRaw))
   return Node{
     Identifier: string(id.([]byte)),
     Values: values,
+    Props: props,
     Children: children,
   }, nil
 }
@@ -125,7 +202,17 @@ eof = !.
 boolean = "true" { return true, nil } / "false" { return false, nil }
 null = "null" { return nil, nil }
 keyword = boolean / null
-value = number / keyword / String
+value = val:(number / keyword / String) {
+  return parseValue(val), nil
+}
+prop = id:identifier '=' val:value {
+  // fmt.Printf("Found prop %s, %+v\n", string(id.([]byte)), val)
+  return Prop {
+    Identifier: string(id.([]byte)),
+    Value: parseValue(val),
+  }, nil
+}
+node_prop_or_arg = ("/-" node_space*)? prop / value
 number = '-'? Integer ( '.' DecimalDigit+ )? Exponent? {
     // JSON numbers have the same syntax as Go's, and are parseable using
     // strconv.
