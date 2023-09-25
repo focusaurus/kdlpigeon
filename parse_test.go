@@ -51,6 +51,20 @@ func TestParse(t *testing.T) {
 				return expected
 			},
 		},
+		"!simple props": {
+			input: `foo a=0 b=3.14 c="hi" d=null`,
+			expected: func() Node {
+				expected := emptyNode()
+				expected.Identifier = "foo"
+				expected.Props = []Prop{
+					{Identifier: "a", Value: parseValue(0.0)},
+					{Identifier: "b", Value: parseValue(3.14)},
+					{Identifier: "c", Value: parseValue("hi")},
+					{Identifier: "d", Value: parseValue(nil)},
+				}
+				return expected
+			},
+		},
 	}
 
 	// To debug a particular test case first, add ! as a prefix to it's description.
@@ -63,7 +77,7 @@ func TestParse(t *testing.T) {
 
 	for _, desc := range keys {
 		t.Run(desc, func(t *testing.T) {
-			test, _ := tests[desc]
+			test := tests[desc]
 			result, err := Parse("test.kdl", []byte(test.input))
 			assert.NoError(t, err)
 			rootNode := mustRootNode(result)

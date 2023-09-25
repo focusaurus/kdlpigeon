@@ -43,7 +43,7 @@ func parseValue(v any) Value {
   if valString, ok := v.(string); ok {
     return Value{Type: StringValue, Str: valString}
   }
-  return Value{}
+  return Value{Type: NullValue}
 }
 
 type ValueG[T bool|string|float64] struct {
@@ -209,7 +209,7 @@ prop = id:identifier '=' val:value {
   // fmt.Printf("Found prop %s, %+v\n", string(id.([]byte)), val)
   return Prop {
     Identifier: string(id.([]byte)),
-    Value: parseValue(val),
+    Value: val.(Value),
   }, nil
 }
 node_prop_or_arg = ("/-" node_space*)? prop / value
