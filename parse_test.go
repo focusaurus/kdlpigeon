@@ -98,6 +98,12 @@ func TestParse(t *testing.T) {
 				return doc
 			},
 		},
+		"slash dash": {
+			input: `/-foo a=0 b=3.14 c="hi" d=null`,
+			expected: func() Document {
+				return Document{Nodes: []Node{}}
+			},
+		},
 	}
 
 	// To debug a particular test case first, add ! as a prefix to it's description.
