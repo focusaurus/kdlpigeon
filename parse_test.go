@@ -28,11 +28,7 @@ func emptyNode() Node {
 }
 
 func doc1Node() Document {
-	return Document{
-		Nodes: []Node{
-			{Children: []Node{}, Props: []Prop{}, Values: []Value{}},
-		},
-	}
+	return Document{Nodes: []Node{emptyNode()}}
 }
 
 func TestParse(t *testing.T) {

@@ -128,20 +128,21 @@ func toAnySlice(v any) []any {
 }
 
 nodes = linespace* nodes:(node nodes?)? linespace* {
-  var doc Document
-  if nodes != nil {
-    parsedNodes := make([]Node, 0)
-    for _, untypedNode := range nodes.([]interface{}) {
-      if node, ok := untypedNode.(Node); ok {
-        parsedNodes = append(parsedNodes, node)
-        continue
-      }
-      if typedDoc, ok := untypedNode.(Document); ok {
-        doc = typedDoc
-      }
-    }
-    doc.Nodes = parsedNodes
+  if nodes == nil {
+    return nil, nil
   }
+  var doc Document
+  parsedNodes := make([]Node, 0)
+  for _, untypedNode := range nodes.([]interface{}) {
+    if node, ok := untypedNode.(Node); ok {
+      parsedNodes = append(parsedNodes, node)
+      continue
+    }
+    if typedDoc, ok := untypedNode.(Document); ok {
+      doc = typedDoc
+    }
+  }
+  doc.Nodes = parsedNodes
 
   return doc, nil
 }
