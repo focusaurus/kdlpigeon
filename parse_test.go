@@ -7,13 +7,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func mustRootNode(result interface{}) Node {
+func mustDoc(result interface{}) Document {
+	if doc, ok := result.(Document); ok {
+		return doc
+	}
 	if s1, ok := result.([]interface{}); ok {
 		if s2, ok := s1[1].([]interface{}); ok {
-			return s2[0].(Node)
+			return s2[0].(Document)
 		}
 	}
-	panic("Root node not found")
+	panic("Root document not found")
 }
 
 func emptyNode() Node {
@@ -24,54 +27,75 @@ func emptyNode() Node {
 	}
 }
 
+func doc1Node() Document {
+	return Document{
+		Nodes: []Node{
+			{Children: []Node{}, Props: []Prop{}, Values: []Value{}},
+		},
+	}
+}
+
 func TestParse(t *testing.T) {
 	tests := map[string]struct {
 		input    string
-		expected func() Node
+		expected func() Document
 	}{
 		"just identifier": {
 			input: "foo",
-			expected: func() Node {
-				expected := emptyNode()
-				expected.Identifier = "foo"
-				return expected
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "foo"
+				return doc
 			},
 		},
-		"!with type": {
+		/*
+			"two nodes": {
+				input: "alpha\nbravo\n",
+				expected: func() Document {
+					doc := doc1Node()
+					doc.Nodes[0].Identifier = "alpha"
+					bravo := emptyNode()
+					bravo.Identifier = "bravo"
+					doc.Nodes = append(doc.Nodes, bravo)
+					return doc
+				},
+			},
+		*/
+		"with type": {
 			input: "(user)Bill",
-			expected: func() Node {
-				expected := emptyNode()
-				expected.Identifier = "Bill"
-				expected.Type = "user"
-				return expected
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "Bill"
+				doc.Nodes[0].Type = "user"
+				return doc
 			},
 		},
 		"simple values": {
 			input: `foo 0 3.14 "hi" null`,
-			expected: func() Node {
-				expected := emptyNode()
-				expected.Identifier = "foo"
-				expected.Values = []Value{
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "foo"
+				doc.Nodes[0].Values = []Value{
 					parseValue(0.0),
 					parseValue(3.14),
 					parseValue("hi"),
 					parseValue(nil),
 				}
-				return expected
+				return doc
 			},
 		},
 		"simple props": {
 			input: `foo a=0 b=3.14 c="hi" d=null`,
-			expected: func() Node {
-				expected := emptyNode()
-				expected.Identifier = "foo"
-				expected.Props = []Prop{
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "foo"
+				doc.Nodes[0].Props = []Prop{
 					{Identifier: "a", Value: parseValue(0.0)},
 					{Identifier: "b", Value: parseValue(3.14)},
 					{Identifier: "c", Value: parseValue("hi")},
 					{Identifier: "d", Value: parseValue(nil)},
 				}
-				return expected
+				return doc
 			},
 		},
 	}
@@ -89,8 +113,8 @@ func TestParse(t *testing.T) {
 			test := tests[desc]
 			result, err := Parse("test.kdl", []byte(test.input))
 			assert.NoError(t, err)
-			rootNode := mustRootNode(result)
-			assert.EqualValues(t, test.expected(), rootNode)
+			doc := mustDoc(result)
+			assert.EqualValues(t, test.expected(), doc)
 		})
 	}
 }

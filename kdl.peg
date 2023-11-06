@@ -114,6 +114,10 @@ func (n *Node) String() string {
   return rep
 }
 
+type Document struct {
+  Nodes []Node
+}
+
 func toAnySlice(v any) []any {
     if v == nil {
         return nil
@@ -123,8 +127,29 @@ func toAnySlice(v any) []any {
 
 }
 
-nodes = linespace* nodes:(node nodes?)? linespace*
-node = xtype:xtype? id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
+nodes = linespace* nodes:(node nodes?)? linespace* {
+  var doc Document
+  if nodes != nil {
+    parsedNodes := make([]Node, 0)
+    for _, untypedNode := range nodes.([]interface{}) {
+      if node, ok := untypedNode.(Node); ok {
+        parsedNodes = append(parsedNodes, node)
+        continue
+      }
+      if typedDoc, ok := untypedNode.(Document); ok {
+        doc = typedDoc
+      }
+    }
+    doc.Nodes = parsedNodes
+  }
+
+  return doc, nil
+}
+
+node = slashDashRaw:("/-" node_space*)? xtype:xtype? id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
+  if slashDashRaw != nil {
+    return nil, nil
+  }
   // parsing out the actual child nodes
   // from a sea of whitespace tokens is pretty horrible.
   // This approach does a brute force recursive traverse
