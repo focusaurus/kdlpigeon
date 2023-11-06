@@ -1,7 +1,7 @@
 package kdl
 
 import (
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,7 +73,7 @@ func TestParse(t *testing.T) {
 	for k := range tests {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	for _, desc := range keys {
 		t.Run(desc, func(t *testing.T) {
