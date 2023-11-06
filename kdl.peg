@@ -82,6 +82,7 @@ type Prop struct {
 }
 
 type Node struct {
+  Type string
   Identifier string
   Values []Value
   Props []Prop
@@ -123,7 +124,7 @@ func toAnySlice(v any) []any {
 }
 
 nodes = linespace* nodes:(node nodes?)? linespace*
-node = id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
+node = xtype:xtype? id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
   // parsing out the actual child nodes
   // from a sea of whitespace tokens is pretty horrible.
   // This approach does a brute force recursive traverse
@@ -177,12 +178,16 @@ node = id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node
   // }
 
   walk(toAnySlice(childrenRaw))
-  return Node{
+  node :=  Node {
     Identifier: string(id.([]byte)),
     Values: values,
     Props: props,
     Children: children,
-  }, nil
+  }
+  if xtype != nil {
+    node.Type = string(xtype.([]byte))
+  }
+  return node, nil
 }
 node_terminator = single_line_comment / newline / ';' / eof
 node_space = ws* escline ws* / ws+
@@ -204,6 +209,9 @@ null = "null" { return nil, nil }
 keyword = boolean / null
 value = val:(number / keyword / xstring) {
   return parseValue(val), nil
+}
+xtype = "(" id:identifier ")" {
+  return c.text[1:len(c.text)-1], nil
 }
 prop = id:identifier '=' val:value {
   // fmt.Printf("Found prop %s, %+v\n", string(id.([]byte)), val)

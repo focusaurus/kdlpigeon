@@ -37,6 +37,15 @@ func TestParse(t *testing.T) {
 				return expected
 			},
 		},
+		"!with type": {
+			input: "(user)Bill",
+			expected: func() Node {
+				expected := emptyNode()
+				expected.Identifier = "Bill"
+				expected.Type = "user"
+				return expected
+			},
+		},
 		"simple values": {
 			input: `foo 0 3.14 "hi" null`,
 			expected: func() Node {
@@ -51,7 +60,7 @@ func TestParse(t *testing.T) {
 				return expected
 			},
 		},
-		"!simple props": {
+		"simple props": {
 			input: `foo a=0 b=3.14 c="hi" d=null`,
 			expected: func() Node {
 				expected := emptyNode()
