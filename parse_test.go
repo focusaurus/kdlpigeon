@@ -48,6 +48,30 @@ func TestParse(t *testing.T) {
 				return doc
 			},
 		},
+		"leading newlines": {
+			input: "\n\nfoo",
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "foo"
+				return doc
+			},
+		},
+		"trailing newlines": {
+			input: "foo\n\n",
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "foo"
+				return doc
+			},
+		},
+		"newlines before and after": {
+			input: "\n\nfoo\n\n",
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "foo"
+				return doc
+			},
+		},
 		/*
 			"two nodes": {
 				input: "alpha\nbravo\n",
