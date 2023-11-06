@@ -202,7 +202,7 @@ eof = !.
 boolean = "true" { return true, nil } / "false" { return false, nil }
 null = "null" { return nil, nil }
 keyword = boolean / null
-value = val:(number / keyword / String) {
+value = val:(number / keyword / xstring) {
   return parseValue(val), nil
 }
 prop = id:identifier '=' val:value {
@@ -213,28 +213,28 @@ prop = id:identifier '=' val:value {
   }, nil
 }
 node_prop_or_arg = ("/-" node_space*)? prop / value
-number = '-'? Integer ( '.' DecimalDigit+ )? Exponent? {
+number = '-'? integer ( '.' decimal_digit+ )? exponent? {
     // JSON numbers have the same syntax as Go's, and are parseable using
     // strconv.
     return strconv.ParseFloat(string(c.text), 64)
 }
 
-Integer = '0' / NonZeroDecimalDigit DecimalDigit*
+integer = '0' / non_zero_decimal_digit decimal_digit*
 
-Exponent = 'e'i [+-]? DecimalDigit+
+exponent = 'e'i [+-]? decimal_digit+
 
-DecimalDigit = [0-9]
+decimal_digit = [0-9]
 
-NonZeroDecimalDigit = [1-9]
-EscapedChar = [\x00-\x1f"\\]
+non_zero_decimal_digit = [1-9]
+escaped_char = [\x00-\x1f"\\]
 
-SingleCharEscape = ["\\/bfnrt]
+single_char_escape = ["\\/bfnrt]
 
-UnicodeEscape = 'u' HexDigit HexDigit HexDigit HexDigit
+unicode_escape = 'u' hex_digit hex_digit hex_digit hex_digit
 
-EscapeSequence = SingleCharEscape / UnicodeEscape
+escape_sequence = single_char_escape / unicode_escape
 
-String = '"' ( !EscapedChar . / '\\' EscapeSequence )* '"' {
+xstring = '"' ( !escaped_char . / '\\' escape_sequence )* '"' {
     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
     return strconv.Unquote(string(c.text))
 }
@@ -259,7 +259,7 @@ Node = node:(Identifier) _ {
 
 BareIdentifier = id:()
 
-Identifier = String / BareIdentifier
+Identifier = xstring / BareIdentifier
 
 
 HexDigit = [0-9a-f]i
