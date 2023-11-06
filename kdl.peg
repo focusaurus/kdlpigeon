@@ -190,13 +190,13 @@ escline = '\\' ws* (single_line_comment / newline)
 node_children = ("/-" node_space*)? '{' nodes '}'
 bom = '\uFEFF'
 // TODO add rest from table in spec
-unicode_space = [ ]
+unicode_space = [ \t\n\r\f]
 ws = bom / unicode_space
 // TODO add rest from table in spec
 newline = [\n]
 linespace = newline / ws / single_line_comment
 single_line_comment = "//" newline+ (newline / eof)
-identifier = [a-zA-Z]+ { return c.text, nil }
+identifier = [a-z0-9]i+ { return c.text, nil }
 node_space = ws+
 eof = !.
 boolean = "true" { return true, nil } / "false" { return false, nil }
@@ -238,6 +238,7 @@ xstring = '"' ( !escaped_char . / '\\' escape_sequence )* '"' {
     c.text = bytes.Replace(c.text, []byte(`\/`), []byte(`/`), -1)
     return strconv.Unquote(string(c.text))
 }
+hex_digit = [0-9a-f]i
 
 /*
 nodes = linespace* (node nodes?)? linespace*
@@ -261,12 +262,5 @@ BareIdentifier = id:()
 
 Identifier = xstring / BareIdentifier
 
-
-HexDigit = [0-9a-f]i
-
-
-Null = "null" { return nil, nil }
-
-_ "whitespace" = [ \t\r\n]*
 
 */
