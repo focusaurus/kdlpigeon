@@ -68,19 +68,27 @@ func TestParse(t *testing.T) {
 				return doc
 			},
 		},
-		/*
-			"two nodes": {
-				input: "alpha\nbravo\n",
-				expected: func() Document {
-					doc := doc1Node()
-					doc.Nodes[0].Identifier = "alpha"
-					bravo := emptyNode()
-					bravo.Identifier = "bravo"
-					doc.Nodes = append(doc.Nodes, bravo)
-					return doc
-				},
+		"two nodes": {
+			input: "alpha\nbravo\n",
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "alpha"
+				bravo := emptyNode()
+				bravo.Identifier = "bravo"
+				doc.Nodes = append(doc.Nodes, bravo)
+				return doc
 			},
-		*/
+		},
+		"!nested nodes": {
+			input: "frank{\ndweezle\n}",
+			expected: func() Document {
+				doc := doc1Node()
+				doc.Nodes[0].Identifier = "frank"
+				doc.Nodes[0].Children = []Node{emptyNode()}
+				doc.Nodes[0].Children[0].Identifier = "dweezle"
+				return doc
+			},
+		},
 		"with type": {
 			input: "(user)Bill",
 			expected: func() Document {

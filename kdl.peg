@@ -114,40 +114,7 @@ func (n *Node) String() string {
   return rep
 }
 
-type Document struct {
-  Nodes []Node
-}
-
-func toAnySlice(v any) []any {
-    if v == nil {
-        return nil
-    }
-    return v.([]any)
-}
-
-}
-
-nodes = linespace* nodes:(node nodes?)? linespace* {
-  if nodes == nil {
-    return nil, nil
-  }
-  var doc Document
-  parsedNodes := make([]Node, 0)
-  for _, untypedNode := range nodes.([]interface{}) {
-    if node, ok := untypedNode.(Node); ok {
-      parsedNodes = append(parsedNodes, node)
-      continue
-    }
-    if typedDoc, ok := untypedNode.(Document); ok {
-      doc = typedDoc
-    }
-  }
-  doc.Nodes = parsedNodes
-
-  return doc, nil
-}
-
-node = slashDashRaw:("/-" node_space*)? xtype:xtype? id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
+func parseNode(slashDashRaw, xtype, id, valuesRaw, childrenRaw interface{}) (interface{}, error) {
   if slashDashRaw != nil {
     return nil, nil
   }
@@ -214,6 +181,43 @@ node = slashDashRaw:("/-" node_space*)? xtype:xtype? id:identifier valuesRaw:(no
     node.Type = string(xtype.([]byte))
   }
   return node, nil
+}
+
+type Document struct {
+  Nodes []Node
+}
+
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
+
+}
+
+nodes = linespace* nodes:(node nodes?)? linespace* {
+ var doc Document
+ if nodes == nil {
+   return doc, nil
+ }
+ parsedNodes := make([]Node, 0)
+ for _, untypedNode := range nodes.([]interface{}) {
+    if node, ok := untypedNode.(Node); ok {
+      parsedNodes = append(parsedNodes, node)
+      continue
+    }
+    if typedDoc, ok := untypedNode.(Document); ok {
+      doc = typedDoc
+    }
+  }
+  doc.Nodes = parsedNodes
+
+  return doc, nil
+}
+
+node = slashDashRaw:("/-" node_space*)? xtype:xtype? id:identifier valuesRaw:(node_space+ node_prop_or_arg)* childrenRaw:(node_space* node_children ws*)? node_space* node_terminator {
+  return parseNode(slashDashRaw, xtype, id, valuesRaw, childrenRaw)
 }
 node_terminator = single_line_comment / newline / ';' / eof
 node_space = ws* escline ws* / ws+
